@@ -1,38 +1,50 @@
-import { Link, Route, Routes } from "react-router-dom";
-import { AppBar, Box, Button, Container, Toolbar, Typography } from "@mui/material";
-import SimpleBar from "simplebar-react";
-import "simplebar-react/dist/simplebar.min.css";
-import Home from "./pages/Home.jsx";
-import About from "./pages/About.jsx";
+import { Box, CssBaseline } from "@mui/material";
+import { useEffect } from "react";
+import { LanguageProvider } from "./context/LanguageContext.jsx";
+import TopBar from "./components/TopBar.jsx";
+import AppRouter from "./router/AppRouter.jsx";
+import api from "./api/client.js";
+
+const getDeviceId = () => {
+  const key = "spa_device_id";
+  const existing = localStorage.getItem(key);
+  if (existing) return existing;
+  const generated =
+    (typeof crypto !== "undefined" && crypto.randomUUID && crypto.randomUUID()) ||
+    `dev-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  localStorage.setItem(key, generated);
+  return generated;
+};
+
+const getCountryFromLocale = () => {
+  const locale = navigator.language || "en-US";
+  const region = locale.split("-")[1];
+  if (!region) return "Unknown";
+  try {
+    const display = new Intl.DisplayNames([locale], { type: "region" });
+    return display.of(region) || region;
+  } catch {
+    return region;
+  }
+};
 
 const App = () => {
-  return (
-    <Box sx={{ minHeight: "100vh", backgroundColor: "#f4f6f8" }}>
-      <AppBar position="static">
-        <Toolbar sx={{ gap: 2 }}>
-          <Typography variant="h6" sx={{ flexGrow: 1 }}>
-            SPA MERN Básica
-          </Typography>
-          <Button color="inherit" component={Link} to="/">
-            Inicio
-          </Button>
-          <Button color="inherit" component={Link} to="/about">
-            Acerca
-          </Button>
-        </Toolbar>
-      </AppBar>
+  useEffect(() => {
+    const deviceId = getDeviceId();
+    const country = getCountryFromLocale();
+    api.post("/api/visits", { section: "cv", deviceId, country }).catch(() => {});
+  }, []);
 
-      <Container sx={{ py: 4 }}>
-        <SimpleBar style={{ maxHeight: 420 }}>
-          <Box sx={{ p: 2 }}>
-            <Routes>
-              <Route path="/" element={<Home />} />
-              <Route path="/about" element={<About />} />
-            </Routes>
-          </Box>
-        </SimpleBar>
-      </Container>
-    </Box>
+  return (
+    <LanguageProvider>
+      <Box className="app-root">
+        <CssBaseline />
+        <TopBar />
+        <Box component="main" sx={{ px: { xs: 2, md: 6 }, py: { xs: 4, md: 6 } }}>
+          <AppRouter />
+        </Box>
+      </Box>
+    </LanguageProvider>
   );
 };
 
